@@ -1,6 +1,11 @@
 package edu.grinnell.csc207.compression;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Map;
+import java.util.Scanner;
+
+// If 0, go left in the tree, if 1, go right.
 
 /**
  * The driver for the Grin compression program.
@@ -11,9 +16,14 @@ public class Grin {
      * .grin file denoted by outfile.
      * @param infile the file to decode
      * @param outfile the file to ouptut to
+     * @throws IOException if the file cannot be read
      */
-    public static void decode (String infile, String outfile) {
-        // TODO: fill me in!
+    public static void decode (String infile, String outfile) throws IOException {
+        BitInputStream s = new BitInputStream(infile);
+        BitOutputStream out = new BitOutputStream(outfile);
+        Map<Short, Integer> frequencyMap = createFrequencyMap(infile);
+        HuffmanTree hTree = new HuffmanTree(frequencyMap);
+        hTree.decode(s, out);
     }
 
     /**
@@ -22,10 +32,20 @@ public class Grin {
      * BitInputStream, consuming 8 bits at a time.
      * @param file the file to read
      * @return a freqency map for the given file
+     * @throws IOException if the file cannot be read
      */
-    public static Map<Short, Integer> createFrequencyMap (String file) {
-        // TODO: fill me in!
-        return null;
+    public static Map<Short, Integer> createFrequencyMap (String file) throws IOException {
+        BitInputStream s = new BitInputStream(file);
+        Map<Short, Integer> frequencyMap = new java.util.HashMap<>();
+        while (s.hasBits()) {
+            int b = s.readBits(8);
+            if(b == -1) {
+                break; // EOF encountered
+            }
+            short byteValue = (short) b;
+            frequencyMap.put(byteValue, frequencyMap.getOrDefault(byteValue, 0) + 1);
+        } 
+        return frequencyMap;
     }
 
     /**
@@ -43,7 +63,27 @@ public class Grin {
      * @param args the command-line arguments.
      */
     public static void main(String[] args) {
-        // TODO: fill me in!
+        Scanner scanner = new Scanner(System.in);
+        if (args.length != 3) {
+            System.out.println("Usage: java Grin <encode|decode> <infile> <outfile>");
+            System.exit(1);
+        }
         System.out.println("Usage: java Grin <encode|decode> <infile> <outfile>");
+        String command = args[0];
+        String infile = args[1];
+        String outfile = args[2];
+        if (command.equals("encode")) {
+            encode(infile, outfile);
+        } else if (command.equals("decode")) {
+            try {
+                decode(infile, outfile);
+            } catch (IOException e) {
+                System.err.println("Error decoding file: " + e.getMessage() + "\n" +
+                                   "This may be because your file does not exist, is " + 
+                                   "not the right format, or has an incorrect path.");
+            }
+        } else {
+            System.out.println("Invalid command! : " + command);
+        }
     }
 }
