@@ -3,6 +3,8 @@ package edu.grinnell.csc207.compression;
 import java.util.Map;
 import java.util.PriorityQueue;
 
+// import javax.swing.tree.AbstractLayoutCache.NodeDimensions;
+
 /**
  * A HuffmanTree derives a space-efficient coding of a collection of byte
  * values.
@@ -33,17 +35,25 @@ public class HuffmanTree {
         private Node right;
 
         /**
-         * Constructs a new Node with the given value and frequency.
+         * Constructs a new Node with the given value and frequency. Includes a left and right node.
          * 
          * @param value     the value of this node
          * @param frequency the frequency of this node
+         * @param left a left node
+         * @param right a right node.
          */
         public Node(short value, int frequency, Node left, Node right) {
+            this.value = 300;
             this.frequency = frequency;
             this.left = left;
             this.right = right;
         }
 
+        /**
+         * Creates a leaf node with null left and right trees. These store our characters.
+         * @param value : the character, as a short.
+         * @param frequency : how often this character occurs
+         */
         public Node(short value, int frequency) {
             this.value = value;
             this.frequency = frequency;
@@ -84,18 +94,28 @@ public class HuffmanTree {
      * @param in the input file (as a BitInputStream)
      */
     public HuffmanTree(BitInputStream in) {
-        this.root = HuffmanInHelper(in);
+        this.root = huffmanInHelper(in);
     }
 
-    public Node HuffmanInHelper(BitInputStream in) {
+    /**
+     * HuffmanInhelper : a recursive function to create a huffman tree from an input file.
+     * @param in : the input file as a bitStream
+     * @return : a node, ideally recursion ultimately makes this the loop.
+     */
+    public Node huffmanInHelper(BitInputStream in) {
         short newValue = (short) in.readBit();
+        System.out.println("Recursive call : comparing " + newValue);
         if (newValue == 0) {
             short key = (short) in.readBit();
             return new Node(key, 1); // 1 or 0 frequency?
         } else {
-            Node left = HuffmanInHelper(in);
-            Node right = HuffmanInHelper(in); // preorder traversal
-            return new Node((short) 0, left.frequency + right.frequency, left, right); // will this work?
+            System.out.println("Left attempt");
+            Node left = huffmanInHelper(in);
+            System.out.println("Right attempt");
+            Node right = huffmanInHelper(in); // preorder traversal
+            System.out.println("Total frequency : " + left.frequency + right.frequency);
+            return new Node((short) 1, left.frequency + right.frequency, left, right); 
+            // will this work? should I use 1?
         }
     }
 
@@ -115,7 +135,7 @@ public class HuffmanTree {
         }
         if (node.left == null && node.right == null) {
             out.writeBit(0); // ???
-            out.writeBits(node.value, 8);
+            out.writeBits(node.value, 9); // 8 or 9?
         } else {
             out.writeBit(1);
             serializeHelper(node.left, out);
@@ -132,8 +152,9 @@ public class HuffmanTree {
      * @param out the file to write the compressed output to.
      */
     public void encode(BitInputStream in, BitOutputStream out) {
-        // TODO: fill me in!
-        // run through it twice.
+        serialize(out);
+        // need to do two things. keep track of characters somehow?
+        // need traversal and valid encoding.
     }
 
     /**
@@ -146,14 +167,19 @@ public class HuffmanTree {
      * @param out the file to write the decompressed output to.
      */
     public void decode(BitInputStream in, BitOutputStream out) {
-        BitInputStream s = in;
-        while (s.hasBits()) {
-            int b = s.readBits(8);
-            if (b == -1) {
-                break; // EOF encountered
+        Node temp = root;
+        while (temp.value != 256) {
+            if (temp.value == 0) {
+                out.writeBits(temp.value, 8);
+                temp = root;
+            } else {
+                int bit = in.readBit();
+                if (bit == 0) {
+                    temp = temp.left;
+                } else if (bit == 1) {
+                    temp = temp.right;
+                }
             }
-            short byteValue = (short) b;
-            out.writeBits(byteValue, 8);
         }
     }
 }
